@@ -39,7 +39,7 @@ export const useTransactionsStore = defineStore('transactions', () => {
   const createTransaction = async (transactionData: Partial<Transaction>) => {
     loading.value = true
     try {
-      const response = await api.post('/create', transactionData)
+      await api.post('/create', transactionData)
       await fetchTransactions()
       toast.success('Transaction created successfully!')
       return true

@@ -46,7 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
   const register = async (username: string, email: string, password: string) => {
     loading.value = true
     try {
-      const response = await api.post('/register', { username, email, password })
+      await api.post('/register', { username, email, password })
       toast.success('Registration successful! Please login.')
       return true
     } catch (error: any) {
