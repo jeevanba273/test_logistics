@@ -110,13 +110,3 @@ api.add_resource(TransApi, '/api/get',
                  '/api/create',
                  '/api/update/<int:transaction_id>',
                  '/api/delete/<int:transaction_id>')  # add the TransApi resource to the API with the specified endpoint
-        
-    
-
-
-
-
-
-
-
-
