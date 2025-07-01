@@ -24,56 +24,94 @@ def register_routes(app):
             'version': '1.0.0'
         })
 
-    @app.route('/api/login', methods=['POST'])
+    @app.route('/api/login', methods=['POST', 'OPTIONS'])
     def login():
-        data = request.get_json()
-        username = data.get('username')
-        password = data.get('password')
-        
-        user = User.query.filter_by(username=username).first()
-        
-        if user and check_password_hash(user.password, password):
-            login_user(user)
-            # Generate auth token
-            auth_token = user.get_auth_token()
-            return jsonify({
-                'message': 'Login successful',
-                'auth_token': auth_token,
-                'user_id': user.id
-            })
-        else:
-            return jsonify({'message': 'Invalid credentials'}), 401
+        if request.method == 'OPTIONS':
+            return jsonify({'status': 'ok'}), 200
+            
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'message': 'No data provided'}), 400
+                
+            username = data.get('username')
+            password = data.get('password')
+            
+            if not username or not password:
+                return jsonify({'message': 'Username and password are required'}), 400
+            
+            user = User.query.filter_by(username=username).first()
+            
+            if user and check_password_hash(user.password, password):
+                login_user(user)
+                # Generate auth token
+                auth_token = user.get_auth_token()
+                
+                # Get user roles
+                roles = [role.name for role in user.roles]
+                
+                return jsonify({
+                    'message': 'Login successful',
+                    'auth_token': auth_token,
+                    'user': {
+                        'id': user.id,
+                        'username': user.username,
+                        'email': user.email,
+                        'role': 'admin' if 'admin' in roles else 'user',
+                        'created_at': user.fs_uniquifier  # Using fs_uniquifier as created_at placeholder
+                    }
+                }), 200
+            else:
+                return jsonify({'message': 'Invalid credentials'}), 401
+                
+        except Exception as e:
+            current_app.logger.error(f"Login error: {str(e)}")
+            return jsonify({'message': 'Login failed due to server error'}), 500
 
-    @app.route('/api/register', methods=['POST'])
+    @app.route('/api/register', methods=['POST', 'OPTIONS'])
     def register():
-        data = request.get_json()
-        username = data.get('username')
-        email = data.get('email')
-        password = data.get('password')
-        
-        if User.query.filter_by(username=username).first():
-            return jsonify({'error': 'Username already exists'}), 400
-        
-        if User.query.filter_by(email=email).first():
-            return jsonify({'error': 'Email already exists'}), 400
-        
-        user = User(
-            username=username,
-            email=email,
-            password=generate_password_hash(password),
-            fs_uniquifier=str(uuid.uuid4())
-        )
-        
-        # Add user role
-        from application.models import Role
-        user_role = Role.query.filter_by(name='user').first()
-        if user_role:
-            user.roles.append(user_role)
-        
-        db.session.add(user)
-        db.session.commit()
-        
-        return jsonify({'message': 'User registered successfully'}), 201
+        if request.method == 'OPTIONS':
+            return jsonify({'status': 'ok'}), 200
+            
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+                
+            username = data.get('username')
+            email = data.get('email')
+            password = data.get('password')
+            
+            if not username or not email or not password:
+                return jsonify({'error': 'Username, email, and password are required'}), 400
+            
+            if User.query.filter_by(username=username).first():
+                return jsonify({'error': 'Username already exists'}), 400
+            
+            if User.query.filter_by(email=email).first():
+                return jsonify({'error': 'Email already exists'}), 400
+            
+            user = User(
+                username=username,
+                email=email,
+                password=generate_password_hash(password),
+                fs_uniquifier=str(uuid.uuid4())
+            )
+            
+            # Add user role
+            from application.models import Role
+            user_role = Role.query.filter_by(name='user').first()
+            if user_role:
+                user.roles.append(user_role)
+            
+            db.session.add(user)
+            db.session.commit()
+            
+            return jsonify({'message': 'User registered successfully'}), 201
+            
+        except Exception as e:
+            current_app.logger.error(f"Registration error: {str(e)}")
+            return jsonify({'error': 'Registration failed due to server error'}), 500
 
     @app.route('/api/home', methods=['GET'])
     @auth_required()
