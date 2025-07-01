@@ -24,19 +24,25 @@ export const useAuthStore = defineStore('auth', () => {
   const login = async (username: string, password: string) => {
     loading.value = true
     try {
-      const response = await api.post('/login', { username, password })
-      const { user: userData, token: userToken } = response.data
+      console.log('Attempting login with:', { username, password: '***' })
+      
+      const response = await api.post('/api/login', { username, password })
+      console.log('Login response:', response.data)
+      
+      const { user: userData, auth_token } = response.data
       
       user.value = userData
-      token.value = userToken
+      token.value = auth_token
       
-      localStorage.setItem('token', userToken)
+      localStorage.setItem('token', auth_token)
       localStorage.setItem('user', JSON.stringify(userData))
       
       toast.success('Login successful!')
       return true
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Login failed')
+      console.error('Login error:', error.response?.data || error.message)
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Login failed'
+      toast.error(errorMessage)
       return false
     } finally {
       loading.value = false
@@ -46,11 +52,12 @@ export const useAuthStore = defineStore('auth', () => {
   const register = async (username: string, email: string, password: string) => {
     loading.value = true
     try {
-      await api.post('/register', { username, email, password })
+      await api.post('/api/register', { username, email, password })
       toast.success('Registration successful! Please login.')
       return true
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Registration failed')
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Registration failed'
+      toast.error(errorMessage)
       return false
     } finally {
       loading.value = false

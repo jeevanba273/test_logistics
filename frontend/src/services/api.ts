@@ -39,6 +39,8 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
+    console.error('API Error:', error.response?.data || error.message)
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
@@ -47,6 +49,8 @@ api.interceptors.response.use(
       toast.error('Server error occurred. Please try again later.')
     } else if (error.response?.data?.message) {
       toast.error(error.response.data.message)
+    } else if (error.response?.data?.error) {
+      toast.error(error.response.data.error)
     }
     return Promise.reject(error)
   }
