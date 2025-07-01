@@ -24,8 +24,15 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      // Use the correct header format for Flask-Security
+      config.headers['Authentication-Token'] = token
     }
+    console.log('API Request:', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers,
+      data: config.data
+    })
     return config
   },
   (error) => {
@@ -36,10 +43,20 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
+    console.log('API Response:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    })
     return response
   },
   (error) => {
-    console.error('API Error:', error.response?.data || error.message)
+    console.error('API Error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    })
     
     if (error.response?.status === 401) {
       localStorage.removeItem('token')

@@ -44,7 +44,7 @@ def register_routes(app):
             
             if user and check_password_hash(user.password, password):
                 login_user(user)
-                # Generate auth token
+                # Generate auth token using Flask-Security method
                 auth_token = user.get_auth_token()
                 
                 # Get user roles
@@ -111,10 +111,11 @@ def register_routes(app):
             
         except Exception as e:
             current_app.logger.error(f"Registration error: {str(e)}")
+            db.session.rollback()
             return jsonify({'error': 'Registration failed due to server error'}), 500
 
     @app.route('/api/home', methods=['GET'])
-    @auth_required()
+    @auth_required('token')
     def home():
         roles = [role.name for role in current_user.roles]
         return jsonify({
@@ -125,7 +126,7 @@ def register_routes(app):
         })
 
     @app.route('/api/logout', methods=['POST'])
-    @auth_required()
+    @auth_required('token')
     def logout():
         logout_user()
         return jsonify({'message': 'Logged out successfully'})

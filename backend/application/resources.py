@@ -2,12 +2,13 @@ from flask_restful import Api, Resource, reqparse
 from flask_security import auth_required, current_user
 from application.models import Transaction, User
 from application.database import db
-from flask import jsonify
+from flask import jsonify, request
+import datetime
 
 api = Api()
 
 class TransactionListAPI(Resource):
-    @auth_required()
+    @auth_required('token')
     def get(self):
         try:
             transactions = Transaction.query.all()
@@ -37,36 +38,35 @@ class TransactionListAPI(Resource):
         except Exception as e:
             return {'error': str(e)}, 500
 
-    @auth_required()
+    @auth_required('token')
     def post(self):
         try:
-            parser = reqparse.RequestParser()
-            parser.add_argument('name', required=False, default='Shipment')
-            parser.add_argument('type', required=False, default='delivery')
-            parser.add_argument('date', required=False)
-            parser.add_argument('delivery_date', required=True)
-            parser.add_argument('source_city', required=False, default='Origin')
-            parser.add_argument('destination_city', required=False, default='Destination')
-            parser.add_argument('description', required=False, default='')
-            parser.add_argument('amount', type=float, required=True)
-            parser.add_argument('status', required=False, default='pending')
-            args = parser.parse_args()
+            # Get JSON data from request
+            data = request.get_json()
+            if not data:
+                return {'error': 'No data provided'}, 400
+
+            # Extract required fields
+            amount = data.get('amount')
+            delivery_date = data.get('delivery_date')
+            
+            if not amount or not delivery_date:
+                return {'error': 'Amount and delivery date are required'}, 400
 
             # Use current date if not provided
-            import datetime
-            transaction_date = args.get('date') or datetime.datetime.now().strftime('%Y-%m-%d')
+            transaction_date = data.get('date') or datetime.datetime.now().strftime('%Y-%m-%d')
 
             transaction = Transaction(
-                name=args['name'],
+                name=data.get('name', 'Shipment'),
                 user_id=current_user.id,
-                type=args['type'],
+                type=data.get('type', 'delivery'),
                 date=transaction_date,
-                delivery_date=args['delivery_date'],
-                source_city=args['source_city'],
-                destination_city=args['destination_city'],
-                description=args.get('description', ''),
-                amount=args['amount'],
-                delivery_status=args.get('status', 'pending'),
+                delivery_date=delivery_date,
+                source_city=data.get('source_city', 'Origin'),
+                destination_city=data.get('destination_city', 'Destination'),
+                description=data.get('description', ''),
+                amount=float(amount),
+                delivery_status=data.get('status', 'pending'),
                 internal_status='requested'
             )
             
@@ -75,12 +75,16 @@ class TransactionListAPI(Resource):
             
             return {'message': 'Transaction created successfully', 'id': transaction.id}, 201
         except Exception as e:
+            db.session.rollback()
             return {'error': str(e)}, 500
+
+    def options(self):
+        return {'status': 'ok'}, 200
 
 api.add_resource(TransactionListAPI, '/api/get', '/api/create')
 
 class TransactionAPI(Resource):
-    @auth_required()
+    @auth_required('token')
     def get(self, transaction_id):
         try:
             transaction = Transaction.query.get_or_404(transaction_id)
@@ -107,35 +111,30 @@ class TransactionAPI(Resource):
         except Exception as e:
             return {'error': str(e)}, 500
 
-    @auth_required()
+    @auth_required('token')
     def put(self, transaction_id):
         try:
             transaction = Transaction.query.get_or_404(transaction_id)
-            parser = reqparse.RequestParser()
-            parser.add_argument('name')
-            parser.add_argument('type')
-            parser.add_argument('date')
-            parser.add_argument('delivery_date')
-            parser.add_argument('source_city')
-            parser.add_argument('destination_city')
-            parser.add_argument('description')
-            parser.add_argument('amount', type=float)
-            parser.add_argument('status')
-            args = parser.parse_args()
+            data = request.get_json()
+            
+            if not data:
+                return {'error': 'No data provided'}, 400
 
-            for key, value in args.items():
+            # Update fields if provided
+            for key, value in data.items():
                 if value is not None:
                     if key == 'status':
                         setattr(transaction, 'delivery_status', value)
-                    else:
+                    elif hasattr(transaction, key):
                         setattr(transaction, key, value)
             
             db.session.commit()
             return {'message': 'Transaction updated successfully'}
         except Exception as e:
+            db.session.rollback()
             return {'error': str(e)}, 500
 
-    @auth_required()
+    @auth_required('token')
     def delete(self, transaction_id):
         try:
             transaction = Transaction.query.get_or_404(transaction_id)
@@ -143,12 +142,16 @@ class TransactionAPI(Resource):
             db.session.commit()
             return {'message': 'Transaction deleted successfully'}
         except Exception as e:
+            db.session.rollback()
             return {'error': str(e)}, 500
+
+    def options(self, transaction_id=None):
+        return {'status': 'ok'}, 200
 
 api.add_resource(TransactionAPI, '/api/update/<int:transaction_id>', '/api/delete/<int:transaction_id>', '/api/review_transaction/<int:transaction_id>')
 
 class PaymentAPI(Resource):
-    @auth_required()
+    @auth_required('token')
     def get(self, transaction_id):
         try:
             transaction = Transaction.query.get_or_404(transaction_id)
@@ -156,58 +159,77 @@ class PaymentAPI(Resource):
             db.session.commit()
             return {'message': 'Payment processed successfully'}
         except Exception as e:
+            db.session.rollback()
             return {'error': str(e)}, 500
+
+    def options(self, transaction_id=None):
+        return {'status': 'ok'}, 200
 
 api.add_resource(PaymentAPI, '/api/pay/<int:transaction_id>')
 
 class UpdateAmountAPI(Resource):
-    @auth_required()
+    @auth_required('token')
     def post(self, transaction_id):
         try:
             transaction = Transaction.query.get_or_404(transaction_id)
-            parser = reqparse.RequestParser()
-            parser.add_argument('amount', type=float, required=True)
-            args = parser.parse_args()
+            data = request.get_json()
             
-            transaction.amount = args['amount']
+            if not data or 'amount' not in data:
+                return {'error': 'Amount is required'}, 400
+            
+            transaction.amount = float(data['amount'])
             transaction.internal_status = 'Payment Pending'
             db.session.commit()
             return {'message': 'Amount updated successfully'}
         except Exception as e:
+            db.session.rollback()
             return {'error': str(e)}, 500
+
+    def options(self, transaction_id=None):
+        return {'status': 'ok'}, 200
 
 api.add_resource(UpdateAmountAPI, '/api/update_amount/<int:transaction_id>')
 
 class UpdateDeliveryStatusAPI(Resource):
-    @auth_required()
+    @auth_required('token')
     def put(self, transaction_id):
         try:
             transaction = Transaction.query.get_or_404(transaction_id)
-            parser = reqparse.RequestParser()
-            parser.add_argument('delivery_status', required=True)
-            args = parser.parse_args()
+            data = request.get_json()
             
-            transaction.delivery_status = args['delivery_status']
+            if not data or 'delivery_status' not in data:
+                return {'error': 'Delivery status is required'}, 400
+            
+            transaction.delivery_status = data['delivery_status']
             db.session.commit()
             return {'message': 'Delivery status updated successfully'}
         except Exception as e:
+            db.session.rollback()
             return {'error': str(e)}, 500
+
+    def options(self, transaction_id=None):
+        return {'status': 'ok'}, 200
 
 api.add_resource(UpdateDeliveryStatusAPI, '/api/update_delivery_status/<int:transaction_id>')
 
 class UpdateDeliveryDateAPI(Resource):
-    @auth_required()
+    @auth_required('token')
     def put(self, transaction_id):
         try:
             transaction = Transaction.query.get_or_404(transaction_id)
-            parser = reqparse.RequestParser()
-            parser.add_argument('delivery_date', required=True)
-            args = parser.parse_args()
+            data = request.get_json()
             
-            transaction.delivery_date = args['delivery_date']
+            if not data or 'delivery_date' not in data:
+                return {'error': 'Delivery date is required'}, 400
+            
+            transaction.delivery_date = data['delivery_date']
             db.session.commit()
             return {'message': 'Delivery date updated successfully'}
         except Exception as e:
+            db.session.rollback()
             return {'error': str(e)}, 500
+
+    def options(self, transaction_id=None):
+        return {'status': 'ok'}, 200
 
 api.add_resource(UpdateDeliveryDateAPI, '/api/update_delivery_date/<int:transaction_id>')

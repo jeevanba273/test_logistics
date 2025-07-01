@@ -23,8 +23,12 @@ def create_app():
         app.config.from_object(LocalDevelopmentConfig)
         cors_origins = ["http://localhost:5173"]
     
-    # Enable CORS
-    CORS(app, origins=cors_origins, supports_credentials=True)
+    # Enable CORS with proper headers
+    CORS(app, 
+         origins=cors_origins, 
+         supports_credentials=True,
+         allow_headers=['Content-Type', 'Authorization', 'Authentication-Token'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
     
     db.init_app(app)
     api.init_app(app)
