@@ -3,9 +3,20 @@ import { useToast } from 'vue-toastification'
 
 const toast = useToast()
 
+// Get API base URL from environment variables
+const getApiBaseUrl = () => {
+  if (import.meta.env.PROD) {
+    return import.meta.env.VITE_API_BASE_URL || 'https://your-railway-backend-url.railway.app'
+  }
+  return '/api' // Use proxy in development
+}
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getApiBaseUrl(),
   timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  }
 })
 
 // Request interceptor
