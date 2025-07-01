@@ -8,6 +8,18 @@
 
       <form @submit.prevent="handleSubmit" class="card space-y-6">
         <div>
+          <label for="name" class="block text-sm font-medium text-gray-700">Shipment Name</label>
+          <input
+            id="name"
+            v-model="form.name"
+            type="text"
+            required
+            class="input mt-1"
+            placeholder="Enter shipment name"
+          />
+        </div>
+
+        <div>
           <label for="amount" class="block text-sm font-medium text-gray-700">Amount ($)</label>
           <input
             id="amount"
@@ -34,6 +46,30 @@
         </div>
 
         <div>
+          <label for="source_city" class="block text-sm font-medium text-gray-700">Source City</label>
+          <input
+            id="source_city"
+            v-model="form.source_city"
+            type="text"
+            required
+            class="input mt-1"
+            placeholder="Enter source city"
+          />
+        </div>
+
+        <div>
+          <label for="destination_city" class="block text-sm font-medium text-gray-700">Destination City</label>
+          <input
+            id="destination_city"
+            v-model="form.destination_city"
+            type="text"
+            required
+            class="input mt-1"
+            placeholder="Enter destination city"
+          />
+        </div>
+
+        <div>
           <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
           <select
             id="status"
@@ -46,6 +82,17 @@
             <option value="in_transit">In Transit</option>
             <option value="delivered">Delivered</option>
           </select>
+        </div>
+
+        <div>
+          <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+          <textarea
+            id="description"
+            v-model="form.description"
+            rows="3"
+            class="input mt-1"
+            placeholder="Enter description (optional)"
+          ></textarea>
         </div>
 
         <div class="flex items-center justify-end space-x-4">
@@ -75,9 +122,14 @@ const transactionsStore = useTransactionsStore()
 const router = useRouter()
 
 const form = reactive({
+  name: '',
   amount: 0,
   delivery_date: '',
-  status: 'pending'
+  source_city: '',
+  destination_city: '',
+  status: 'pending',
+  description: '',
+  type: 'delivery'
 })
 
 const handleSubmit = async () => {
