@@ -6,6 +6,24 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import uuid
 
 def register_routes(app):
+    @app.route('/', methods=['GET'])
+    def health_check():
+        """Health check endpoint for Railway"""
+        return jsonify({
+            'status': 'healthy',
+            'message': 'LogiTrack API is running',
+            'version': '1.0.0'
+        })
+
+    @app.route('/api/health', methods=['GET'])
+    def api_health():
+        """API health check endpoint"""
+        return jsonify({
+            'status': 'healthy',
+            'message': 'LogiTrack API is running',
+            'version': '1.0.0'
+        })
+
     @app.route('/api/login', methods=['POST'])
     def login():
         data = request.get_json()
