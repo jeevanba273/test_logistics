@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 from application.database import db
 from application.models import User, Role
 from application.config import LocalDevelopmentConfig
@@ -10,6 +11,10 @@ from werkzeug.security import generate_password_hash, check_password_hash  # imp
 def create_app():
     app = Flask(__name__)
     app.config.from_object(LocalDevelopmentConfig)
+    
+    # Enable CORS for all routes
+    CORS(app, origins=["http://localhost:5173"], supports_credentials=True)
+    
     db.init_app(app)
     api.init_app(app)  # initialize the Flask-RESTful API with the Flask app
     datastore = SQLAlchemyUserDatastore(db, User, Role) # datastore is used by Flask-Security to manage users and roles, to prefill the database with initial data
@@ -48,7 +53,7 @@ from application.routes import *  # import all the routes from the routes module
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True, port=5000)
 
 
 #now we will use postman to test the application
