@@ -1,20 +1,15 @@
-class Config():
-    DEBUG = False
-    SQLALCHEMY_TRACK_MODIFICATIONS = True
+import os
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
+    SECURITY_PASSWORD_SALT = os.environ.get('SECURITY_PASSWORD_SALT') or 'your-password-salt-here'
 
 class LocalDevelopmentConfig(Config):
-    # database configuration
-    SQLALCHEMY_DATABASE_URI = "sqlite:///lmsv2.sqlite3"
     DEBUG = True
-
-    #config for security
-    SECRET_KEY = "this_is_a_secret_key" #hash user credentials in the session
-    SECURITY_PASSWORD_HASH = "bcrypt" #mechanism to hash passwords
-    #explanation of bcrypt(password,salt) :
-    #bcrypt is a method which takes a password from form and hashes it using a salt that we defined
-    #the salt is a random string which is used to hash the password, it is stored
-    #application can be more secure by using a different salt for each user
-    SECURITY_PASSWORD_SALT = "this_is_a_password_salt"  #helps in hashing passwords
-    WTF_CSRF_ENABLED = False  
-    SECURITY_TOKEN_AUTHENTICATION_HEADER = "Authentication-Token"
-
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///logistics.db'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SECURITY_REGISTERABLE = True
+    SECURITY_CONFIRMABLE = False
+    SECURITY_SEND_REGISTER_EMAIL = False
+    SECURITY_UNAUTHORIZED_VIEW = None
+    WTF_CSRF_ENABLED = False
