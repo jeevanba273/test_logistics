@@ -6,7 +6,7 @@ const toast = useToast()
 // Get API base URL from environment variables
 const getApiBaseUrl = () => {
   if (import.meta.env.PROD) {
-    return import.meta.env.VITE_API_BASE_URL || 'https://your-railway-backend-url.railway.app'
+    return import.meta.env.VITE_API_BASE_URL || 'https://testlogistics-production.up.railway.app'
   }
   return '/api' // Use proxy in development
 }
