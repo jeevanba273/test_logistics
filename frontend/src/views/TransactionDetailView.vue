@@ -1,316 +1,323 @@
 <template>
-  <div class="p-6 max-w-4xl mx-auto">
-    <div v-if="isLoading" class="flex justify-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-    </div>
-
-    <div v-else-if="transaction" class="space-y-6">
-      <!-- Header -->
-      <div class="flex items-center justify-between animate-fade-in">
+  <div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+      <div class="flex items-center justify-between mb-8">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900">{{ transaction.name }}</h1>
-          <p class="text-gray-600 mt-1">Transaction #{{ transaction.id }}</p>
+          <h1 class="text-3xl font-bold text-gray-900">Transaction #{{ $route.params.id }}</h1>
+          <p class="mt-2 text-gray-600">Transaction details and management</p>
         </div>
-        <div class="flex space-x-3">
-          <span :class="getStatusClass(transaction.internal_status)" class="status-badge">
-            {{ transaction.internal_status }}
-          </span>
-          <span :class="getStatusClass(transaction.delivery_status)" class="status-badge">
-            {{ transaction.delivery_status }}
-          </span>
-        </div>
+        <RouterLink to="/transactions" class="btn btn-secondary">
+          Back to Transactions
+        </RouterLink>
       </div>
 
-      <!-- Main Content -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Transaction Details -->
-        <div class="lg:col-span-2 space-y-6">
-          <div class="card animate-slide-up">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Shipment Information</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p class="text-sm text-gray-500 uppercase tracking-wide">Type</p>
-                <p class="text-base font-medium text-gray-900">{{ transaction.type }}</p>
-              </div>
-              <div>
-                <p class="text-sm text-gray-500 uppercase tracking-wide">Date Created</p>
-                <p class="text-base font-medium text-gray-900">{{ formatDate(transaction.date) }}</p>
-              </div>
-              <div>
-                <p class="text-sm text-gray-500 uppercase tracking-wide">Source City</p>
-                <p class="text-base font-medium text-gray-900">{{ transaction.source_city }}</p>
-              </div>
-              <div>
-                <p class="text-sm text-gray-500 uppercase tracking-wide">Destination City</p>
-                <p class="text-base font-medium text-gray-900">{{ transaction.destination_city }}</p>
-              </div>
-              <div>
-                <p class="text-sm text-gray-500 uppercase tracking-wide">Delivery Date</p>
-                <p class="text-base font-medium text-gray-900">
-                  {{ transaction.delivery_date !== 'to be updated' ? formatDate(transaction.delivery_date) : 'To be updated' }}
-                </p>
-              </div>
-              <div>
-                <p class="text-sm text-gray-500 uppercase tracking-wide">Created By</p>
-                <p class="text-base font-medium text-gray-900">{{ transaction.user }}</p>
-              </div>
+      <div v-if="loading" class="text-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+        <p class="mt-4 text-gray-600">Loading transaction...</p>
+      </div>
+
+      <div v-else-if="!transaction" class="text-center py-12">
+        <DocumentTextIcon class="mx-auto h-16 w-16 text-gray-400" />
+        <h3 class="mt-4 text-lg font-medium text-gray-900">Transaction not found</h3>
+        <p class="mt-2 text-gray-500">The transaction you're looking for doesn't exist.</p>
+      </div>
+
+      <div v-else class="space-y-6">
+        <!-- Transaction Info -->
+        <div class="card">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Transaction Information</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 class="text-sm font-medium text-gray-500">Amount</h3>
+              <p class="mt-1 text-lg font-semibold text-gray-900">${{ transaction.amount.toFixed(2) }}</p>
             </div>
-            <div v-if="transaction.description" class="mt-4">
-              <p class="text-sm text-gray-500 uppercase tracking-wide">Description</p>
-              <p class="text-base text-gray-900 mt-1">{{ transaction.description }}</p>
+            <div>
+              <h3 class="text-sm font-medium text-gray-500">Status</h3>
+              <span
+                class="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium"
+                :class="getStatusColor(transaction.status)"
+              >
+                {{ transaction.status }}
+              </span>
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-gray-500">Payment Status</h3>
+              <span
+                class="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium"
+                :class="getPaymentStatusColor(transaction.payment_status)"
+              >
+                {{ transaction.payment_status }}
+              </span>
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-gray-500">Delivery Date</h3>
+              <p class="mt-1 text-sm text-gray-900">{{ formatDate(transaction.delivery_date) }}</p>
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-gray-500">Created</h3>
+              <p class="mt-1 text-sm text-gray-900">{{ formatDate(transaction.created_at) }}</p>
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-gray-500">Last Updated</h3>
+              <p class="mt-1 text-sm text-gray-900">{{ formatDate(transaction.updated_at) }}</p>
             </div>
           </div>
+        </div>
 
-          <!-- Admin Actions -->
-          <div v-if="authStore.isAdmin" class="card animate-slide-up">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Admin Actions</h2>
-            <div class="space-y-4">
-              <div class="flex items-center space-x-4">
+        <!-- User Actions -->
+        <div v-if="!authStore.isAdmin" class="card">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Actions</h2>
+          <div class="flex space-x-4">
+            <button
+              v-if="transaction.payment_status === 'pending'"
+              @click="handlePayment"
+              :disabled="transactionsStore.loading"
+              class="btn btn-primary"
+            >
+              <span v-if="transactionsStore.loading">Processing...</span>
+              <span v-else>Pay Now</span>
+            </button>
+            <button
+              v-if="['pending', 'in_transit'].includes(transaction.status)"
+              @click="showDeleteConfirm = true"
+              class="btn btn-danger"
+            >
+              Cancel Transaction
+            </button>
+          </div>
+        </div>
+
+        <!-- Admin Actions -->
+        <div v-if="authStore.isAdmin" class="card">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Admin Actions</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Update Amount</label>
+              <div class="flex">
                 <input
-                  v-model="adminActions.amount"
+                  v-model.number="adminForm.amount"
                   type="number"
-                  placeholder="Update amount"
-                  class="input-field flex-1"
+                  step="0.01"
+                  min="0"
+                  class="input flex-1"
+                  placeholder="New amount"
                 />
                 <button
-                  @click="updateAmount"
-                  :disabled="!adminActions.amount"
-                  class="btn-primary disabled:opacity-50"
+                  @click="handleUpdateAmount"
+                  :disabled="transactionsStore.loading"
+                  class="btn btn-primary ml-2"
                 >
-                  Update Amount
+                  Update
                 </button>
               </div>
-              
-              <div class="flex items-center space-x-4">
-                <input
-                  v-model="adminActions.deliveryDate"
-                  type="date"
-                  class="input-field flex-1"
-                />
-                <button
-                  @click="updateDeliveryDate"
-                  :disabled="!adminActions.deliveryDate"
-                  class="btn-primary disabled:opacity-50"
-                >
-                  Update Delivery Date
-                </button>
-              </div>
-              
-              <div class="flex items-center space-x-4">
-                <select v-model="adminActions.deliveryStatus" class="input-field flex-1">
-                  <option value="">Select delivery status</option>
-                  <option value="processing">Processing</option>
-                  <option value="in transit">In Transit</option>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Update Status</label>
+              <div class="flex">
+                <select v-model="adminForm.status" class="input flex-1">
+                  <option value="pending">Pending</option>
+                  <option value="in_transit">In Transit</option>
                   <option value="delivered">Delivered</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
                 <button
-                  @click="updateDeliveryStatus"
-                  :disabled="!adminActions.deliveryStatus"
-                  class="btn-primary disabled:opacity-50"
+                  @click="handleUpdateStatus"
+                  :disabled="transactionsStore.loading"
+                  class="btn btn-primary ml-2"
                 >
-                  Update Status
+                  Update
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Update Delivery Date</label>
+              <div class="flex">
+                <input
+                  v-model="adminForm.delivery_date"
+                  type="date"
+                  class="input flex-1"
+                />
+                <button
+                  @click="handleUpdateDeliveryDate"
+                  :disabled="transactionsStore.loading"
+                  class="btn btn-primary ml-2"
+                >
+                  Update
                 </button>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Sidebar -->
-        <div class="space-y-6">
-          <!-- Amount Card -->
-          <div class="card animate-bounce-in">
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Amount</h3>
-            <p class="text-3xl font-bold text-primary-600">${{ transaction.amount.toLocaleString() }}</p>
+          <div class="pt-4 border-t border-gray-200">
             <button
-              v-if="canPay"
-              @click="payTransaction"
-              class="btn-primary w-full mt-4"
+              @click="showDeleteConfirm = true"
+              class="btn btn-danger"
             >
-              Pay Now
+              Delete Transaction
             </button>
           </div>
+        </div>
+      </div>
 
-          <!-- Actions -->
-          <div class="card">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
-            <div class="space-y-3">
-              <router-link to="/transactions" class="btn-secondary w-full text-center block">
-                Back to Transactions
-              </router-link>
+      <!-- Delete Confirmation Modal -->
+      <div
+        v-if="showDeleteConfirm"
+        class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+        @click="showDeleteConfirm = false"
+      >
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white" @click.stop>
+          <div class="mt-3 text-center">
+            <h3 class="text-lg font-medium text-gray-900">Confirm Deletion</h3>
+            <div class="mt-2 px-7 py-3">
+              <p class="text-sm text-gray-500">
+                Are you sure you want to delete this transaction? This action cannot be undone.
+              </p>
+            </div>
+            <div class="flex justify-center space-x-4 mt-4">
               <button
-                v-if="canEdit"
-                @click="editTransaction"
-                class="btn-secondary w-full"
+                @click="showDeleteConfirm = false"
+                class="btn btn-secondary"
               >
-                Edit Transaction
+                Cancel
               </button>
               <button
-                v-if="canDelete"
-                @click="deleteTransaction"
-                class="btn-danger w-full"
+                @click="handleDelete"
+                :disabled="transactionsStore.loading"
+                class="btn btn-danger"
               >
-                Delete Transaction
+                <span v-if="transactionsStore.loading">Deleting...</span>
+                <span v-else>Delete</span>
               </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
-
-    <div v-else class="text-center py-12 animate-fade-in">
-      <p class="text-gray-500">Transaction not found</p>
-      <router-link to="/transactions" class="btn-primary mt-4">
-        Back to Transactions
-      </router-link>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { DocumentTextIcon } from '@heroicons/vue/24/outline'
 import { useAuthStore } from '@/stores/auth'
 import { useTransactionsStore } from '@/stores/transactions'
-import { useToast } from 'vue-toastification'
-import { format } from 'date-fns'
-import type { Transaction } from '@/stores/transactions'
 
-const route = useRoute()
-const router = useRouter()
 const authStore = useAuthStore()
 const transactionsStore = useTransactionsStore()
-const toast = useToast()
+const route = useRoute()
+const router = useRouter()
 
-const transaction = ref<Transaction | null>(null)
-const isLoading = ref(true)
+const loading = ref(false)
+const showDeleteConfirm = ref(false)
 
-const adminActions = reactive({
-  amount: '',
-  deliveryDate: '',
-  deliveryStatus: ''
+const adminForm = reactive({
+  amount: 0,
+  status: '',
+  delivery_date: ''
 })
 
-const canPay = computed(() => {
-  return transaction.value?.internal_status === 'Payment Pending' && 
-         (authStore.user?.id === transaction.value?.user_id || authStore.isAdmin)
+const transaction = computed(() => {
+  const id = parseInt(route.params.id as string)
+  return transactionsStore.transactions.find(t => t.id === id)
 })
 
-const canEdit = computed(() => {
-  return authStore.user?.id === transaction.value?.user_id || authStore.isAdmin
-})
-
-const canDelete = computed(() => {
-  return authStore.user?.id === transaction.value?.user_id || authStore.isAdmin
-})
-
-const getStatusClass = (status: string) => {
-  const statusClasses: Record<string, string> = {
-    'requested': 'status-requested',
-    'paid': 'status-paid',
-    'Payment Pending': 'status-pending',
-    'delivered': 'status-delivered',
-    'processing': 'status-processing',
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'in_transit':
+      return 'bg-blue-100 text-blue-800'
+    case 'delivered':
+      return 'bg-green-100 text-green-800'
+    case 'cancelled':
+      return 'bg-red-100 text-red-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
   }
-  return statusClasses[status] || 'status-requested'
+}
+
+const getPaymentStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'paid':
+      return 'bg-green-100 text-green-800'
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'failed':
+      return 'bg-red-100 text-red-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
 }
 
 const formatDate = (dateString: string) => {
-  try {
-    return format(new Date(dateString), 'MMM dd, yyyy')
-  } catch {
-    return dateString
-  }
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
-const payTransaction = async () => {
+const handlePayment = async () => {
   if (!transaction.value) return
   
-  try {
-    await transactionsStore.payTransaction(transaction.value.id)
-    toast.success('Payment processed successfully!')
-    await fetchTransaction()
-  } catch (error: any) {
-    toast.error(error.response?.data?.message || 'Payment failed')
+  const success = await transactionsStore.payTransaction(transaction.value.id)
+  if (success) {
+    await transactionsStore.fetchTransactions()
   }
 }
 
-const updateAmount = async () => {
-  if (!transaction.value || !adminActions.amount) return
+const handleUpdateAmount = async () => {
+  if (!transaction.value || !adminForm.amount) return
   
-  try {
-    await transactionsStore.updateAmount(transaction.value.id, parseFloat(adminActions.amount))
-    toast.success('Amount updated successfully!')
-    adminActions.amount = ''
-    await fetchTransaction()
-  } catch (error: any) {
-    toast.error(error.response?.data?.message || 'Failed to update amount')
+  const success = await transactionsStore.updateAmount(transaction.value.id, adminForm.amount)
+  if (success) {
+    adminForm.amount = 0
   }
 }
 
-const updateDeliveryDate = async () => {
-  if (!transaction.value || !adminActions.deliveryDate) return
+const handleUpdateStatus = async () => {
+  if (!transaction.value || !adminForm.status) return
   
-  try {
-    await transactionsStore.updateDeliveryDate(transaction.value.id, adminActions.deliveryDate)
-    toast.success('Delivery date updated successfully!')
-    adminActions.deliveryDate = ''
-    await fetchTransaction()
-  } catch (error: any) {
-    toast.error(error.response?.data?.message || 'Failed to update delivery date')
+  const success = await transactionsStore.updateDeliveryStatus(transaction.value.id, adminForm.status)
+  if (success) {
+    adminForm.status = ''
   }
 }
 
-const updateDeliveryStatus = async () => {
-  if (!transaction.value || !adminActions.deliveryStatus) return
+const handleUpdateDeliveryDate = async () => {
+  if (!transaction.value || !adminForm.delivery_date) return
   
-  try {
-    await transactionsStore.updateDeliveryStatus(transaction.value.id, adminActions.deliveryStatus)
-    toast.success('Delivery status updated successfully!')
-    adminActions.deliveryStatus = ''
-    await fetchTransaction()
-  } catch (error: any) {
-    toast.error(error.response?.data?.message || 'Failed to update delivery status')
+  const success = await transactionsStore.updateDeliveryDate(transaction.value.id, adminForm.delivery_date)
+  if (success) {
+    adminForm.delivery_date = ''
   }
 }
 
-const editTransaction = () => {
-  // TODO: Implement edit functionality
-  toast.info('Edit functionality coming soon!')
-}
-
-const deleteTransaction = async () => {
+const handleDelete = async () => {
   if (!transaction.value) return
   
-  if (confirm('Are you sure you want to delete this transaction?')) {
-    try {
-      await transactionsStore.deleteTransaction(transaction.value.id)
-      toast.success('Transaction deleted successfully!')
-      router.push('/transactions')
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to delete transaction')
-    }
+  const success = await transactionsStore.deleteTransaction(transaction.value.id)
+  if (success) {
+    router.push('/transactions')
   }
+  showDeleteConfirm.value = false
 }
 
-const fetchTransaction = async () => {
-  const id = parseInt(route.params.id as string)
-  if (isNaN(id)) {
-    router.push('/transactions')
-    return
+onMounted(async () => {
+  if (transactionsStore.transactions.length === 0) {
+    await transactionsStore.fetchTransactions()
   }
-
-  try {
-    transaction.value = await transactionsStore.getTransactionById(id)
-  } catch (error: any) {
-    toast.error('Transaction not found')
-    router.push('/transactions')
-  } finally {
-    isLoading.value = false
+  
+  if (transaction.value) {
+    adminForm.amount = transaction.value.amount
+    adminForm.status = transaction.value.status
+    adminForm.delivery_date = transaction.value.delivery_date.split('T')[0]
   }
-}
-
-onMounted(() => {
-  fetchTransaction()
 })
 </script>

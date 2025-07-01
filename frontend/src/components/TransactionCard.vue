@@ -1,106 +1,83 @@
 <template>
-  <div class="card hover:shadow-md transition-shadow duration-200 animate-fade-in">
-    <div class="flex items-start justify-between mb-4">
-      <div>
-        <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ transaction.name }}</h3>
-        <p class="text-sm text-gray-500">{{ transaction.type }}</p>
+  <div class="card hover:shadow-md transition-shadow cursor-pointer" @click="$emit('click')">
+    <div class="flex items-center justify-between">
+      <div class="flex-1">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-lg font-semibold text-gray-900">Transaction #{{ transaction.id }}</h3>
+          <span
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+            :class="getStatusColor(transaction.status)"
+          >
+            {{ transaction.status }}
+          </span>
+        </div>
+        
+        <div class="space-y-1 text-sm text-gray-600">
+          <p><span class="font-medium">Amount:</span> ${{ transaction.amount.toFixed(2) }}</p>
+          <p><span class="font-medium">Delivery Date:</span> {{ formatDate(transaction.delivery_date) }}</p>
+          <p><span class="font-medium">Payment:</span> 
+            <span
+              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ml-1"
+              :class="getPaymentStatusColor(transaction.payment_status)"
+            >
+              {{ transaction.payment_status }}
+            </span>
+          </p>
+          <p v-if="transaction.user" class="text-xs text-gray-500">
+            User: {{ transaction.user.username }}
+          </p>
+        </div>
       </div>
-      <div class="flex space-x-2">
-        <span :class="getStatusClass(transaction.internal_status)" class="status-badge">
-          {{ transaction.internal_status }}
-        </span>
-        <span :class="getStatusClass(transaction.delivery_status)" class="status-badge">
-          {{ transaction.delivery_status }}
-        </span>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4 mb-4">
-      <div>
-        <p class="text-xs text-gray-500 uppercase tracking-wide">From</p>
-        <p class="text-sm font-medium text-gray-900">{{ transaction.source_city }}</p>
-      </div>
-      <div>
-        <p class="text-xs text-gray-500 uppercase tracking-wide">To</p>
-        <p class="text-sm font-medium text-gray-900">{{ transaction.destination_city }}</p>
-      </div>
-    </div>
-
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Amount</p>
-        <p class="text-lg font-bold text-primary-600">${{ transaction.amount.toLocaleString() }}</p>
-      </div>
-      <div class="text-right">
-        <p class="text-xs text-gray-500 uppercase tracking-wide">Date</p>
-        <p class="text-sm font-medium text-gray-900">{{ formatDate(transaction.date) }}</p>
-      </div>
-    </div>
-
-    <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-      <div class="flex items-center space-x-2">
-        <UserIcon class="w-4 h-4 text-gray-400" />
-        <span class="text-sm text-gray-600">{{ transaction.user }}</span>
-      </div>
-      <div class="flex space-x-2">
-        <button
-          @click="$emit('view', transaction.id)"
-          class="text-primary-600 hover:text-primary-700 text-sm font-medium"
-        >
-          View Details
-        </button>
-        <button
-          v-if="canPay"
-          @click="$emit('pay', transaction.id)"
-          class="text-green-600 hover:text-green-700 text-sm font-medium"
-        >
-          Pay Now
-        </button>
+      
+      <div class="ml-4 flex-shrink-0">
+        <ChevronRightIcon class="w-5 h-5 text-gray-400" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { format } from 'date-fns'
-import { UserIcon } from '@heroicons/vue/24/outline'
+import { ChevronRightIcon } from '@heroicons/vue/24/outline'
 import type { Transaction } from '@/stores/transactions'
-import { useAuthStore } from '@/stores/auth'
 
 interface Props {
   transaction: Transaction
 }
 
-const props = defineProps<Props>()
-const authStore = useAuthStore()
-
+defineProps<Props>()
 defineEmits<{
-  view: [id: number]
-  pay: [id: number]
+  click: []
 }>()
 
-const canPay = computed(() => {
-  return props.transaction.internal_status === 'Payment Pending' && 
-         (authStore.user?.id === props.transaction.user_id || authStore.isAdmin)
-})
-
-const getStatusClass = (status: string) => {
-  const statusClasses: Record<string, string> = {
-    'requested': 'status-requested',
-    'paid': 'status-paid',
-    'Payment Pending': 'status-pending',
-    'delivered': 'status-delivered',
-    'processing': 'status-processing',
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'in_transit':
+      return 'bg-blue-100 text-blue-800'
+    case 'delivered':
+      return 'bg-green-100 text-green-800'
+    case 'cancelled':
+      return 'bg-red-100 text-red-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
   }
-  return statusClasses[status] || 'status-requested'
+}
+
+const getPaymentStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'paid':
+      return 'bg-green-100 text-green-800'
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'failed':
+      return 'bg-red-100 text-red-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
 }
 
 const formatDate = (dateString: string) => {
-  try {
-    return format(new Date(dateString), 'MMM dd, yyyy')
-  } catch {
-    return dateString
-  }
+  return new Date(dateString).toLocaleDateString()
 }
 </script>

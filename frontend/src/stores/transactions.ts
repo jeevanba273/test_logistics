@@ -1,159 +1,156 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
-import { useAuthStore } from './auth'
+import { useToast } from 'vue-toastification'
+
+const toast = useToast()
 
 export interface Transaction {
   id: number
-  name: string
   user_id: number
-  type: string
-  date: string
-  delivery_date: string
-  source_city: string
-  destination_city: string
-  internal_status: string
-  delivery_status: string
-  description: string
   amount: number
-  user: string
+  delivery_date: string
+  status: string
+  payment_status: string
+  created_at: string
+  updated_at: string
+  user?: {
+    username: string
+    email: string
+  }
 }
 
 export const useTransactionsStore = defineStore('transactions', () => {
   const transactions = ref<Transaction[]>([])
-  const isLoading = ref(false)
-  const authStore = useAuthStore()
+  const loading = ref(false)
 
   const fetchTransactions = async () => {
-    isLoading.value = true
+    loading.value = true
     try {
-      const response = await api.get('/api/get', {
-        headers: { 'Authentication-Token': authStore.token }
-      })
+      const response = await api.get('/get')
       transactions.value = response.data
-    } catch (error) {
-      console.error('Failed to fetch transactions:', error)
-      transactions.value = []
+    } catch (error: any) {
+      toast.error('Failed to fetch transactions')
     } finally {
-      isLoading.value = false
+      loading.value = false
     }
   }
 
   const createTransaction = async (transactionData: Partial<Transaction>) => {
+    loading.value = true
     try {
-      const response = await api.post('/api/create', transactionData, {
-        headers: { 'Authentication-Token': authStore.token }
-      })
-      await fetchTransactions() // Refresh the list
-      return response.data
-    } catch (error) {
-      throw error
+      const response = await api.post('/create', transactionData)
+      await fetchTransactions()
+      toast.success('Transaction created successfully!')
+      return true
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to create transaction')
+      return false
+    } finally {
+      loading.value = false
     }
   }
 
   const updateTransaction = async (id: number, transactionData: Partial<Transaction>) => {
+    loading.value = true
     try {
-      const response = await api.put(`/api/update/${id}`, transactionData, {
-        headers: { 'Authentication-Token': authStore.token }
-      })
-      await fetchTransactions() // Refresh the list
-      return response.data
-    } catch (error) {
-      throw error
+      await api.put(`/update/${id}`, transactionData)
+      await fetchTransactions()
+      toast.success('Transaction updated successfully!')
+      return true
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update transaction')
+      return false
+    } finally {
+      loading.value = false
     }
   }
 
   const deleteTransaction = async (id: number) => {
+    loading.value = true
     try {
-      const response = await api.delete(`/api/delete/${id}`, {
-        headers: { 'Authentication-Token': authStore.token }
-      })
-      await fetchTransactions() // Refresh the list
-      return response.data
-    } catch (error) {
-      throw error
+      await api.delete(`/delete/${id}`)
+      await fetchTransactions()
+      toast.success('Transaction deleted successfully!')
+      return true
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete transaction')
+      return false
+    } finally {
+      loading.value = false
     }
   }
 
   const payTransaction = async (id: number) => {
+    loading.value = true
     try {
-      const response = await api.get(`/api/pay/${id}`, {
-        headers: { 'Authentication-Token': authStore.token }
-      })
-      await fetchTransactions() // Refresh the list
-      return response.data
-    } catch (error) {
-      throw error
-    }
-  }
-
-  const updateDeliveryStatus = async (id: number, deliveryStatus: string) => {
-    try {
-      const response = await api.put(`/api/update_delivery_status/${id}`, 
-        { delivery_status: deliveryStatus }, 
-        {
-          headers: { 'Authentication-Token': authStore.token }
-        }
-      )
-      await fetchTransactions() // Refresh the list
-      return response.data
-    } catch (error) {
-      throw error
+      await api.get(`/pay/${id}`)
+      await fetchTransactions()
+      toast.success('Payment processed successfully!')
+      return true
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Payment failed')
+      return false
+    } finally {
+      loading.value = false
     }
   }
 
   const updateAmount = async (id: number, amount: number) => {
+    loading.value = true
     try {
-      const response = await api.post(`/api/update_amount/${id}`, 
-        { amount }, 
-        {
-          headers: { 'Authentication-Token': authStore.token }
-        }
-      )
-      await fetchTransactions() // Refresh the list
-      return response.data
-    } catch (error) {
-      throw error
+      await api.post(`/update_amount/${id}`, { amount })
+      await fetchTransactions()
+      toast.success('Amount updated successfully!')
+      return true
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update amount')
+      return false
+    } finally {
+      loading.value = false
     }
   }
 
-  const updateDeliveryDate = async (id: number, deliveryDate: string) => {
+  const updateDeliveryStatus = async (id: number, status: string) => {
+    loading.value = true
     try {
-      const response = await api.post(`/api/update_delivery_date/${id}`, 
-        { delivery_date: deliveryDate }, 
-        {
-          headers: { 'Authentication-Token': authStore.token }
-        }
-      )
-      await fetchTransactions() // Refresh the list
-      return response.data
-    } catch (error) {
-      throw error
+      await api.put(`/update_delivery_status/${id}`, { status })
+      await fetchTransactions()
+      toast.success('Delivery status updated successfully!')
+      return true
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update delivery status')
+      return false
+    } finally {
+      loading.value = false
     }
   }
 
-  const getTransactionById = async (id: number) => {
+  const updateDeliveryDate = async (id: number, delivery_date: string) => {
+    loading.value = true
     try {
-      const response = await api.get(`/api/review_transaction/${id}`, {
-        headers: { 'Authentication-Token': authStore.token }
-      })
-      return response.data
-    } catch (error) {
-      throw error
+      await api.post(`/update_delivery_date/${id}`, { delivery_date })
+      await fetchTransactions()
+      toast.success('Delivery date updated successfully!')
+      return true
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update delivery date')
+      return false
+    } finally {
+      loading.value = false
     }
   }
 
   return {
     transactions,
-    isLoading,
+    loading,
     fetchTransactions,
     createTransaction,
     updateTransaction,
     deleteTransaction,
     payTransaction,
-    updateDeliveryStatus,
     updateAmount,
-    updateDeliveryDate,
-    getTransactionById
+    updateDeliveryStatus,
+    updateDeliveryDate
   }
 })

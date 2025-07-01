@@ -1,95 +1,89 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
+import { useToast } from 'vue-toastification'
+
+const toast = useToast()
 
 export interface User {
   id: number
   username: string
   email: string
-  roles: string[]
+  role: string
+  created_at: string
 }
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
-  const token = ref<string | null>(localStorage.getItem('auth_token'))
-  const isLoading = ref(false)
+  const token = ref<string | null>(null)
+  const loading = ref(false)
 
-  const isAuthenticated = computed(() => !!token.value && !!user.value)
-  const isAdmin = computed(() => user.value?.roles.includes('admin') ?? false)
-  const isUser = computed(() => user.value?.roles.includes('user') ?? false)
+  const isAuthenticated = computed(() => !!token.value)
+  const isAdmin = computed(() => user.value?.role === 'admin')
 
   const login = async (username: string, password: string) => {
-    isLoading.value = true
+    loading.value = true
     try {
-      const response = await api.post('/api/login', { username, password })
-      token.value = response.data.auth_token
-      localStorage.setItem('auth_token', token.value!)
+      const response = await api.post('/login', { username, password })
+      const { user: userData, token: userToken } = response.data
       
-      // Fetch user details
-      await fetchUserDetails()
+      user.value = userData
+      token.value = userToken
       
-      return response.data
-    } catch (error) {
-      throw error
+      localStorage.setItem('token', userToken)
+      localStorage.setItem('user', JSON.stringify(userData))
+      
+      toast.success('Login successful!')
+      return true
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Login failed')
+      return false
     } finally {
-      isLoading.value = false
+      loading.value = false
     }
   }
 
   const register = async (username: string, email: string, password: string) => {
-    isLoading.value = true
+    loading.value = true
     try {
-      const response = await api.post('/api/register', { username, email, password })
-      return response.data
-    } catch (error) {
-      throw error
+      const response = await api.post('/register', { username, email, password })
+      toast.success('Registration successful! Please login.')
+      return true
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Registration failed')
+      return false
     } finally {
-      isLoading.value = false
-    }
-  }
-
-  const fetchUserDetails = async () => {
-    if (!token.value) return
-    
-    try {
-      const response = await api.get('/api/home', {
-        headers: { 'Authentication-Token': token.value }
-      })
-      user.value = {
-        id: response.data.user_id || 0,
-        username: response.data.username,
-        email: response.data.email,
-        roles: response.data.roles
-      }
-    } catch (error) {
-      console.error('Failed to fetch user details:', error)
-      logout()
+      loading.value = false
     }
   }
 
   const logout = () => {
     user.value = null
     token.value = null
-    localStorage.removeItem('auth_token')
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    toast.success('Logged out successfully')
   }
 
-  const initializeAuth = async () => {
-    if (token.value) {
-      await fetchUserDetails()
+  const checkAuth = () => {
+    const storedToken = localStorage.getItem('token')
+    const storedUser = localStorage.getItem('user')
+    
+    if (storedToken && storedUser) {
+      token.value = storedToken
+      user.value = JSON.parse(storedUser)
     }
   }
 
   return {
     user,
     token,
-    isLoading,
+    loading,
     isAuthenticated,
     isAdmin,
-    isUser,
     login,
     register,
     logout,
-    initializeAuth,
-    fetchUserDetails
+    checkAuth
   }
 })

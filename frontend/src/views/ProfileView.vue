@@ -1,115 +1,103 @@
 <template>
-  <div class="p-6 max-w-2xl mx-auto">
-    <div class="animate-fade-in">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">Profile</h1>
-      <p class="text-gray-600 mb-8">Manage your account information</p>
-    </div>
+  <div class="max-w-2xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Profile</h1>
+        <p class="mt-2 text-gray-600">Your account information and activity</p>
+      </div>
 
-    <div class="space-y-6">
-      <!-- Profile Information -->
-      <div class="card animate-slide-up">
-        <div class="flex items-center space-x-4 mb-6">
-          <div class="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
-            <UserIcon class="w-8 h-8 text-primary-600" />
+      <!-- User Information -->
+      <div class="card mb-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Username</label>
+            <p class="mt-1 text-sm text-gray-900">{{ authStore.user?.username }}</p>
           </div>
           <div>
-            <h2 class="text-xl font-semibold text-gray-900">{{ authStore.user?.username }}</h2>
-            <p class="text-gray-600">{{ authStore.user?.email }}</p>
-            <div class="flex space-x-2 mt-2">
-              <span
-                v-for="role in authStore.user?.roles"
-                :key="role"
-                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
-              >
-                {{ role }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-            <input
-              :value="authStore.user?.username"
-              type="text"
-              disabled
-              class="input-field bg-gray-50"
-            />
+            <label class="block text-sm font-medium text-gray-500">Email</label>
+            <p class="mt-1 text-sm text-gray-900">{{ authStore.user?.email }}</p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              :value="authStore.user?.email"
-              type="email"
-              disabled
-              class="input-field bg-gray-50"
-            />
+            <label class="block text-sm font-medium text-gray-500">Role</label>
+            <span
+              class="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              :class="authStore.isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'"
+            >
+              {{ authStore.user?.role }}
+            </span>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Member Since</label>
+            <p class="mt-1 text-sm text-gray-900">{{ formatDate(authStore.user?.created_at || '') }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Account Statistics -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatsCard
-          title="My Transactions"
-          :value="userStats.totalTransactions"
-          :icon="DocumentTextIcon"
-          color="blue"
-        />
-        <StatsCard
-          title="Total Spent"
-          :value="`$${userStats.totalSpent.toLocaleString()}`"
-          :icon="CurrencyDollarIcon"
-          color="green"
-        />
-        <StatsCard
-          title="Active Shipments"
-          :value="userStats.activeShipments"
-          :icon="TruckIcon"
-          color="purple"
-        />
+      <!-- Activity Summary -->
+      <div class="card mb-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Activity Summary</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary-600">{{ userStats.totalTransactions }}</div>
+            <div class="text-sm text-gray-500">Total Transactions</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-green-600">${{ userStats.totalSpent.toFixed(2) }}</div>
+            <div class="text-sm text-gray-500">Total Spent</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-blue-600">{{ userStats.activeShipments }}</div>
+            <div class="text-sm text-gray-500">Active Shipments</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-purple-600">{{ userStats.completedShipments }}</div>
+            <div class="text-sm text-gray-500">Completed</div>
+          </div>
+        </div>
       </div>
 
-      <!-- Recent Activity -->
-      <div class="card animate-slide-up">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+      <!-- Recent Transactions -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-semibold text-gray-900">Recent Transactions</h2>
+          <RouterLink to="/transactions" class="text-primary-600 hover:text-primary-500 text-sm font-medium">
+            View All
+          </RouterLink>
+        </div>
+
         <div v-if="recentTransactions.length === 0" class="text-center py-8">
-          <DocumentTextIcon class="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p class="text-gray-500">No recent activity</p>
+          <DocumentTextIcon class="mx-auto h-12 w-12 text-gray-400" />
+          <h3 class="mt-2 text-sm font-medium text-gray-900">No transactions yet</h3>
+          <p class="mt-1 text-sm text-gray-500">Get started by creating your first transaction.</p>
+          <div class="mt-4">
+            <RouterLink to="/transactions/create" class="btn btn-primary">
+              Create Transaction
+            </RouterLink>
+          </div>
         </div>
-        <div v-else class="space-y-4">
+
+        <div v-else class="space-y-3">
           <div
             v-for="transaction in recentTransactions"
             :key="transaction.id"
-            class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+            class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+            @click="$router.push(`/transactions/${transaction.id}`)"
           >
             <div>
-              <p class="font-medium text-gray-900">{{ transaction.name }}</p>
-              <p class="text-sm text-gray-600">
-                {{ transaction.source_city }} → {{ transaction.destination_city }}
-              </p>
+              <p class="text-sm font-medium text-gray-900">Transaction #{{ transaction.id }}</p>
+              <p class="text-xs text-gray-500">{{ formatDate(transaction.created_at) }}</p>
             </div>
             <div class="text-right">
-              <p class="font-medium text-gray-900">${{ transaction.amount.toLocaleString() }}</p>
-              <span :class="getStatusClass(transaction.internal_status)" class="status-badge">
-                {{ transaction.internal_status }}
+              <p class="text-sm font-medium text-gray-900">${{ transaction.amount.toFixed(2) }}</p>
+              <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                :class="getStatusColor(transaction.status)"
+              >
+                {{ transaction.status }}
               </span>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="card">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <router-link to="/transactions/create" class="btn-primary text-center">
-            Create New Transaction
-          </router-link>
-          <router-link to="/transactions" class="btn-secondary text-center">
-            View All Transactions
-          </router-link>
         </div>
       </div>
     </div>
@@ -118,50 +106,62 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
+import { DocumentTextIcon } from '@heroicons/vue/24/outline'
 import { useAuthStore } from '@/stores/auth'
 import { useTransactionsStore } from '@/stores/transactions'
-import StatsCard from '@/components/StatsCard.vue'
-import {
-  UserIcon,
-  DocumentTextIcon,
-  CurrencyDollarIcon,
-  TruckIcon
-} from '@heroicons/vue/24/outline'
 
 const authStore = useAuthStore()
 const transactionsStore = useTransactionsStore()
 
-const userTransactions = computed(() => 
-  transactionsStore.transactions.filter(t => t.user_id === authStore.user?.id)
-)
+const userTransactions = computed(() => {
+  return transactionsStore.transactions.filter(t => t.user_id === authStore.user?.id)
+})
 
-const recentTransactions = computed(() => 
-  userTransactions.value.slice(0, 5)
-)
+const recentTransactions = computed(() => {
+  return userTransactions.value
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5)
+})
 
 const userStats = computed(() => {
   const transactions = userTransactions.value
+  const paidTransactions = transactions.filter(t => t.payment_status === 'paid')
+  
   return {
     totalTransactions: transactions.length,
-    totalSpent: transactions.reduce((sum, t) => sum + t.amount, 0),
-    activeShipments: transactions.filter(t => 
-      t.delivery_status !== 'delivered' && t.delivery_status !== 'cancelled'
-    ).length
+    totalSpent: paidTransactions.reduce((sum, t) => sum + t.amount, 0),
+    activeShipments: transactions.filter(t => ['pending', 'in_transit'].includes(t.status)).length,
+    completedShipments: transactions.filter(t => t.status === 'delivered').length
   }
 })
 
-const getStatusClass = (status: string) => {
-  const statusClasses: Record<string, string> = {
-    'requested': 'status-requested',
-    'paid': 'status-paid',
-    'Payment Pending': 'status-pending',
-    'delivered': 'status-delivered',
-    'processing': 'status-processing',
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800'
+    case 'in_transit':
+      return 'bg-blue-100 text-blue-800'
+    case 'delivered':
+      return 'bg-green-100 text-green-800'
+    case 'cancelled':
+      return 'bg-red-100 text-red-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
   }
-  return statusClasses[status] || 'status-requested'
+}
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
 }
 
 onMounted(() => {
-  transactionsStore.fetchTransactions()
+  if (transactionsStore.transactions.length === 0) {
+    transactionsStore.fetchTransactions()
+  }
 })
 </script>
