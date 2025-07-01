@@ -16,7 +16,20 @@ class LocalDevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///logistics.db'
-    # Handle PostgreSQL URL format for Railway
-    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
-        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
+    # Get DATABASE_URL from environment, fallback to SQLite if not provided or invalid
+    database_url = os.environ.get('DATABASE_URL')
+    
+    if database_url:
+        # Handle PostgreSQL URL format for Railway
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        
+        # Validate the URL format - check if it contains placeholder text
+        if 'username:password@host:port' in database_url or ':port/' in database_url:
+            # Invalid placeholder URL, fallback to SQLite
+            SQLALCHEMY_DATABASE_URI = 'sqlite:///logistics.db'
+        else:
+            SQLALCHEMY_DATABASE_URI = database_url
+    else:
+        # No DATABASE_URL provided, use SQLite
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///logistics.db'
