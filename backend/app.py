@@ -30,7 +30,11 @@ def create_app():
     api.init_app(app)
     datastore = SQLAlchemyUserDatastore(db, User, Role)
     app.security = Security(app, datastore)
-    app.app_context().push()
+    
+    # Register routes after app is configured
+    from application.routes import register_routes
+    register_routes(app)
+    
     return app
 
 app = create_app()
@@ -56,8 +60,6 @@ with app.app_context():
             roles=['user']
         )
     db.session.commit()
-
-from application.routes import *
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
